@@ -27,24 +27,24 @@ findLeaves <- function(node) {
     }
   } else {
     count <<- count + 1
-    refseq[count] <<- unlist(strsplit(node$name, "[.]"))[1]
-    print (unlist(strsplit(node$name, "[.]"))[1])
+    geneId[count] <<- unlist(strsplit(node$name, "[.]"))[1]
+    #print (unlist(strsplit(node$name, "[.]"))[1])
   }
 }
 
 data <- fromJSON(file='dendro_row.json', method='C')
 count <- 0
-refseq <- rep(NA,100)
+geneId <- rep(NA,100)
 findLeaves(findNode(data, args[2]))
-refSeqIds <- na.omit(refseq)
+geneIds <- na.omit(geneId)
 
-if (!is.null(refSeqIds)) {
+if (!is.null(geneIds)) {
   # READS THE BACKGROUND FILE (ALL PROTEINS)
   NAMER=read.csv('background_proteins.csv',sep=",",header=TRUE)
   
-  temp = sub("(.*)\\.\\d+", "\\1", refSeqIds)
-  if (sum(NAMER$refseq %in% temp)>0) {
-    SOURCE = data.frame(refseq=temp)
+  temp = sub("(.*)\\.\\d+", "\\1", geneIds)
+  if (sum(NAMER$id %in% temp)>0) {
+    SOURCE = data.frame(id=temp)
   } else if (sum(NAMER$gene %in% temp)>0) {
     SOURCE = data.frame(gene=temp)
   } else {
@@ -68,7 +68,7 @@ if (!is.null(refSeqIds)) {
     thissize = k$sizes[i]
     thisdesc = k$desc[i]
     annot = k$matrix[i,1:thissize]
-  
+    
     back_annot = BACK[BACK %in% annot]
     thissize = k$sizes[i] = length(back_annot)
     if (thissize > 0) k$matrix[i,1:thissize] = paste(back_annot)
@@ -84,7 +84,7 @@ if (!is.null(refSeqIds)) {
     non_group_nonannot = length(background) - length(group) - non_group_annot
     
     test = matrix(c(group_annot, non_group_annot, group_nonannot, non_group_nonannot), nr=2,
-            dimnames=list(c("Group", "NonGroup"), c("Annotated", "NonAnnotated")))
+                  dimnames=list(c("Group", "NonGroup"), c("Annotated", "NonAnnotated")))
     
     per = c(test[1,1]/(test[1,1]+test[1,2]), test[2,1]/(test[2,1]+test[2,2]))
     
@@ -106,24 +106,24 @@ if (!is.null(refSeqIds)) {
         thisname = geneset$names[i]
         thisdesc = geneset$desc[i]
         grouplist = geneset$matrix[i,1:thissize]
-  
+        
         # enr = enrichment_by_fishers(targets, background, grouplist, annot_size = thissize)
         enr = enrichment_by_fishers(targets, background, grouplist)
         p = enr$fisher$p.value
         f = enr$foldx
         mat = enr$mat
         
-          if (mat[1,1] > threshold) {
-            results[i,] = c(thisname, mat[1,1], mat[1,2], mat[2,1], mat[2,2], f, p, p*length(geneset$names))
-          } else {
-            
-          }
+        if (mat[1,1] > threshold) {
+          results[i,] = c(thisname, mat[1,1], mat[1,2], mat[2,1], mat[2,2], f, p, p*length(geneset$names))
+        } else {
+          
+        }
       }
     }
     
     results[complete.cases(results), , drop=FALSE]
   }
-
+  
   if(length(TARGET) > 0) {
     F=enrichment_in_groups(k, TARGET, BACK, threshold=0)
     if (dim(F)[1] == 0) {
@@ -140,7 +140,7 @@ if (!is.null(refSeqIds)) {
       # adjust the p-value for considering the multiple tests
       new.p <- p.adjust(as.numeric(RESULT[,'pvalue']), method ="BH")
     }
-
+    
     RESULT <- cbind(RESULT, 'bh_pvalue'=new.p)
     idx <- which(k$names %in% RESULT[,'geneset'])
     desc <- data.frame('geneset'=k$names[idx],'desc'=k$desc[idx], 'link'=k$links[idx])
